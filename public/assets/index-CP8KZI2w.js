@@ -1,0 +1,1 @@
+import{c as l,j as r}from"./index-Cz0sLFk-.js";const c=i=>{const t=l.c(2),{title:s}=i;let e;return t[0]!==s?(e=r.jsx("div",{className:"text-3xl font-bold text-gray-800 my-5 first-letter:uppercase",children:r.jsx("h2",{children:s})}),t[0]=s,t[1]=e):e=t[1],e};export{c as P};
