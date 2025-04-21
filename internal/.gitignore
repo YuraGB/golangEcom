@@ -1,0 +1,55 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool
+*.coverprofile
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Vendor directory
+/vendor/
+
+# Dependency directories (remove the ones you’re not using)
+Godeps/
+
+# Editor & IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+
+# SQLite DB (якщо локальна)
+*.db
+*.sqlite
+*.sqlite3
+
+# Fiber tmp/cache folders
+/tmp
+/tmp/*
+
+# Docker artifacts (якщо не хочеш комітити)
+**/docker-compose.override.yml
+**/Dockerfile*
+
+# Ent generated files (якщо не хочеш комітити їх)
+ent/entc.go
+ent/schema/*_gen.go
