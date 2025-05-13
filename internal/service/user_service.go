@@ -1,18 +1,45 @@
 package service
 
-import "golang-server/ent"
+import (
+	"context"
+	"errors"
+	"golang-server/ent"
+	"golang-server/ent/user"
+	"golang-server/internal/models"
+	"log"
+)
 
-type User struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	LastName string `json:"lastname"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+func GetAllUsers(db *ent.Client) []ent.User {
+	return []ent.User{}
 }
 
-func GetAllUsers(db *ent.Client) []User {
-	return []User{
-		{ID: 1, Name: "Alice!!!", Email: "test1@emai.com", Password: "1234", LastName: "Smith"},
-		{ID: 2, Name: "Bob!!!", Email: "test2@emai.com", Password: "12345"},
+func CreateUser(ctx context.Context, client *ent.Client, input *models.RegisterUserInput) (*ent.User, error) {
+	if input == nil {
+		log.Println("RegisterUserInput is nil")
+		return nil, errors.New("invalid input: nil")
 	}
+	log.Println("Creating user with input:", input.Email)
+
+	user, err := client.User.
+		Create().
+		SetUsername(input.Username).
+		SetEmail(input.Email).
+		SetPassword(input.Password).
+		SetLastName(input.LastName).
+		Save(context.Background())
+
+	if err != nil {
+		log.Println("Failed to create user:", err)
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func GetUserByID(db *ent.Client, id int) (*ent.User, error) {
+	user, err := db.User.Query().Where(user.ID(id)).Only(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

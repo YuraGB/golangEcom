@@ -1,15 +1,12 @@
 package service
 
+import "golang-server/ent"
+
 type Basket struct {
 	ID uint8
 }
 
-type Product struct {
-	ID       uint8
-	Name     string
-	Price    float32
-	Quantity uint8
-}
+
 
 func GetBasket() []Basket {
 	return []Basket{
@@ -17,7 +14,7 @@ func GetBasket() []Basket {
 	}
 }
 
-func AddProductToBasket(product Product) Product {
+func AddProductToBasket(product *ent.Product)  *ent.Product {
 	// Logic to add product to basket
 	return product
 }
@@ -39,9 +36,9 @@ func RemoveBasket() bool {
 	return true
 }
 
-func UpdateProductQuantity(productID uint8, quantity uint8) Product {
+func UpdateProductQuantity(productID uint8, quantity uint8) *ent.Product {
 	// Logic to update product quantity in the basket
 
-	updatedProduct := Product{ID: productID, Name: "Updated Product", Price: 10.0, Quantity: quantity + 1}
-	return updatedProduct
+	updatedProduct := ent.Product{}
+	return &updatedProduct
 }

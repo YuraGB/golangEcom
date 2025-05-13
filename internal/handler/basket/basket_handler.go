@@ -1,8 +1,10 @@
 package handler
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"golang-server/ent"
 	"golang-server/internal/service"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func GetBasket(c *fiber.Ctx) error {
@@ -11,7 +13,7 @@ func GetBasket(c *fiber.Ctx) error {
 }
 
 func AddToBasket(c *fiber.Ctx) error {
-	var item service.Product
+	var item *ent.Product
 	if err := c.BodyParser(&item); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
@@ -20,11 +22,11 @@ func AddToBasket(c *fiber.Ctx) error {
 }
 
 func RemoveFromBasket(c *fiber.Ctx) error {
-	var item service.Product
+	var item *ent.Product
 	if err := c.BodyParser(&item); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	service.RemoveProductFromBasket(item.ID)
+	service.RemoveProductFromBasket(uint8(item.ID))
 	return c.JSON(service.GetBasket())
 }
 
@@ -34,10 +36,11 @@ func ClearBasket(c *fiber.Ctx) error {
 }
 
 func UpdateProductQuantity(c *fiber.Ctx) error {
-	var item service.Product
+	var item *ent.Product
 	if err := c.BodyParser(&item); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	service.UpdateProductQuantity(item.ID, item.Quantity)
+	// todo - add quantity field to the Product
+	// service.UpdateProductQuantity(uint8(item.ID), item)
 	return c.JSON(service.GetBasket())
 }

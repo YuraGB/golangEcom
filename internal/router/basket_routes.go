@@ -8,6 +8,7 @@ import (
 
 func RegisterBasketRoutes(router fiber.Router) {
 	basket := router.Group("/basket")
+
 	basket.Get("/", handler.GetBasket)
 	basket.Post("/add", handler.AddToBasket)
 	basket.Delete("/remove", handler.RemoveFromBasket)

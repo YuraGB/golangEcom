@@ -17,7 +17,7 @@ func CorsConfig() fiber.Handler {
 	}
 
 	return cors.New(cors.Config{
-		AllowOrigins:     utils.GetEnv("ALLOWEDORIGINS", "*"),
+		AllowOrigins:     utils.GetEnv("ALLOWEDORIGINS", "http://localhost:8082"),
 		AllowMethods:     utils.GetEnv("ALLOWEDMETHODS", "GET,POST,PUT,DELETE,OPTIONS"),
 		AllowHeaders:     utils.GetEnv("ALLOWEDHEADERS", "Origin,Content-Type,Accept,X-Csrf-Token,X-Requested-With"),
 		AllowCredentials: utils.GetEnv("ALLOWEDCREDENTIALS", "true") == "true",

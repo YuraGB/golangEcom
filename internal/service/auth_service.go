@@ -1,47 +1,40 @@
 package service
 
-type UserLoginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
+import (
+	"context"
+	"errors"
+	"golang-server/ent"
+	"golang-server/ent/user"
+	"golang-server/internal/models"
+	"golang-server/utils"
+	"log"
+)
 
-type UserRegisterInput struct {
-	Name     string `json:"name"`
-	Lastname string `json:"lastname"`
-	UserLoginInput
-}
+func LoginService(userInput *models.LoginUserInput, db *ent.Client) (*ent.User, error) {
+	u, err := db.User.
+		Query().
+		Where(user.EmailEQ(userInput.Email)).
+		Only(context.Background())
 
-func LoginService(userInput UserLoginInput) User {
-	// Simulate a user login process
-	// In a real application, you would check the credentials against a database
-	if userInput.Email == "test@email.com" && userInput.Password == "password" {
-		return User{
-			ID:       1,
-			Name:     "Test User",
-			Email:    userInput.Email,
-			LastName: "User",
-		}
+	if err != nil {
+		log.Println("Error in LoginService: Can't get user", err.Error())
+		return nil, errors.New("користувача не знайдено")
 	}
-	return User{}
-}
 
-func RegisterService(inputData UserRegisterInput) User {
-	// Simulate a user registration process
-	// In a real application, you would save the user to a database
-	return User{
-		ID:       1,
-		Name:     inputData.Name,
-		Email:    inputData.Email,
-		LastName: inputData.Lastname,
+	isValid := utils.CompareHashAndPassword(u.Password, userInput.Password)
+
+	if !isValid {
+		log.Println("Error in LoginService: Password not verified. userId:", u.ID)
+		return nil, errors.New("неправильний пароль")
 	}
+
+	return u, nil
 }
 
-func EditService(userData User) User {
-	// Simulate a user edit process
-	// In a real application, you would update the user in a database
-	return User{
+func EditService(userData *ent.User) ent.User {
+	return ent.User{
 		ID:       userData.ID,
-		Name:     userData.Name,
+		Username:     userData.Username,
 		Email:    userData.Email,
 		LastName: userData.LastName,
 	}

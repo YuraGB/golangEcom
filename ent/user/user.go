@@ -19,6 +19,8 @@ const (
 	FieldPassword = "password"
 	// FieldGender holds the string denoting the gender field in the database.
 	FieldGender = "gender"
+	// FieldLastName holds the string denoting the last_name field in the database.
+	FieldLastName = "last_name"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 )
@@ -30,6 +32,7 @@ var Columns = []string{
 	FieldEmail,
 	FieldPassword,
 	FieldGender,
+	FieldLastName,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -51,6 +54,8 @@ var (
 	PasswordValidator func(string) error
 	// DefaultGender holds the default value on creation for the "gender" field.
 	DefaultGender string
+	// LastNameValidator is a validator for the "last_name" field. It is called by the builders before save.
+	LastNameValidator func(string) error
 )
 
 // OrderOption defines the ordering options for the User queries.
@@ -79,4 +84,9 @@ func ByPassword(opts ...sql.OrderTermOption) OrderOption {
 // ByGender orders the results by the gender field.
 func ByGender(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGender, opts...).ToFunc()
+}
+
+// ByLastName orders the results by the last_name field.
+func ByLastName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastName, opts...).ToFunc()
 }

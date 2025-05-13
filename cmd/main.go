@@ -1,8 +1,7 @@
 package main
 
 import (
-	"context"
-	"golang-server/ent"
+	"golang-server/internal/db"
 	"golang-server/internal/router"
 	"log"
 	"os"
@@ -20,16 +19,13 @@ func main() {
 		log.Println(".env не знайдено, використовую системні змінні")
 	}
 
-	client, err := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	client, nil := db.Connect()
+
 	if err != nil {
-		log.Fatalf("❌ Не вдалося підключитись до БД: %v", err)
+		log.Fatalf("❌ База не підключилась: %v", err)
 	}
 
 	defer client.Close()
-
-	if err := client.Schema.Create(context.Background()); err != nil {
-		log.Fatalf("❌ Не вдалося створити схему: %v", err)
-	}
 
 	app := fiber.New()
 
@@ -43,7 +39,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8081"
+		port = "8080"
 	}
 
 	log.Printf("🚀 Сервер запущено на порту %s", port)

@@ -8,6 +8,86 @@ import (
 )
 
 var (
+	// OrdersColumns holds the columns for the "orders" table.
+	OrdersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "payment_type", Type: field.TypeEnum, Enums: []string{"CASH", "CARD"}},
+		{Name: "address", Type: field.TypeString},
+		{Name: "city", Type: field.TypeString},
+		{Name: "state", Type: field.TypeString},
+		{Name: "zip", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// OrdersTable holds the schema information for the "orders" table.
+	OrdersTable = &schema.Table{
+		Name:       "orders",
+		Columns:    OrdersColumns,
+		PrimaryKey: []*schema.Column{OrdersColumns[0]},
+	}
+	// OrderProductsColumns holds the columns for the "order_products" table.
+	OrderProductsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "quantity", Type: field.TypeInt},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "order_order_products", Type: field.TypeInt},
+		{Name: "product_order_products", Type: field.TypeInt},
+	}
+	// OrderProductsTable holds the schema information for the "order_products" table.
+	OrderProductsTable = &schema.Table{
+		Name:       "order_products",
+		Columns:    OrderProductsColumns,
+		PrimaryKey: []*schema.Column{OrderProductsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "order_products_orders_order_products",
+				Columns:    []*schema.Column{OrderProductsColumns[4]},
+				RefColumns: []*schema.Column{OrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "order_products_products_order_products",
+				Columns:    []*schema.Column{OrderProductsColumns[5]},
+				RefColumns: []*schema.Column{ProductsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// ProductsColumns holds the columns for the "products" table.
+	ProductsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString},
+		{Name: "category", Type: field.TypeString},
+		{Name: "price", Type: field.TypeFloat64},
+		{Name: "discount_percentage", Type: field.TypeFloat64},
+		{Name: "rating", Type: field.TypeFloat64},
+		{Name: "stock", Type: field.TypeInt},
+		{Name: "brand", Type: field.TypeString},
+		{Name: "sku", Type: field.TypeString},
+		{Name: "weight", Type: field.TypeFloat64},
+		{Name: "warranty_information", Type: field.TypeString},
+		{Name: "shipping_information", Type: field.TypeString},
+		{Name: "availability_status", Type: field.TypeString},
+		{Name: "return_policy", Type: field.TypeString},
+		{Name: "minimum_order_quantity", Type: field.TypeInt},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "barcode", Type: field.TypeString},
+		{Name: "qr_code", Type: field.TypeString},
+		{Name: "thumbnail", Type: field.TypeString},
+		{Name: "tags", Type: field.TypeJSON},
+		{Name: "images", Type: field.TypeJSON},
+		{Name: "dimensions", Type: field.TypeJSON},
+		{Name: "reviews", Type: field.TypeJSON},
+	}
+	// ProductsTable holds the schema information for the "products" table.
+	ProductsTable = &schema.Table{
+		Name:       "products",
+		Columns:    ProductsColumns,
+		PrimaryKey: []*schema.Column{ProductsColumns[0]},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -15,6 +95,7 @@ var (
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "password", Type: field.TypeString},
 		{Name: "gender", Type: field.TypeString, Default: "human"},
+		{Name: "last_name", Type: field.TypeString},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
@@ -24,9 +105,14 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		OrdersTable,
+		OrderProductsTable,
+		ProductsTable,
 		UsersTable,
 	}
 )
 
 func init() {
+	OrderProductsTable.ForeignKeys[0].RefTable = OrdersTable
+	OrderProductsTable.ForeignKeys[1].RefTable = ProductsTable
 }
