@@ -3,37 +3,41 @@ package main
 import (
 	"golang-server/internal/db"
 	"golang-server/internal/router"
-	"log"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "entgo.io/ent/dialect/sql"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println(".env не знайдено, використовую системні змінні")
-	}
-
-	client, nil := db.Connect()
-
-	if err != nil {
-		log.Fatalf("❌ База не підключилась: %v", err)
-	}
-
-	defer client.Close()
-
-	app := fiber.New()
-
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Fatalf("❌ Не вдалося ініціалізувати логер: %v", err)
+	// init logger
+	logger, errorLogger := zap.NewProduction()
+	if errorLogger != nil {
+		logger.Fatal("❌ Не вдалося ініціалізувати логер:", zap.Error(errorLogger))
 	}
 	defer logger.Sync()
+	// ----------------
+
+	// init env
+	err := godotenv.Load()
+	if err != nil {
+		logger.Fatal(".env не знайдено, використовую системні змінні")
+	}
+	// ----------------
+
+	// db client
+	client, err := db.Connect(logger)
+	if err != nil {
+		logger.Fatal("❌ База не підключилась: %v", zap.Error(err))
+	}
+	defer client.Close()
+	// -------------------
+
+	// init app + router
+	app := fiber.New()
 
 	router.RegisterRoutes(app, client, logger)
 
@@ -41,7 +45,12 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	// -----------------
 
-	log.Printf("🚀 Сервер запущено на порту %s", port)
-	log.Fatal(app.Listen(":" + port))
+	// start server
+	logger.Info("🚀 Сервер запущено", zap.String("port", port))
+
+	if err := app.Listen(":" + port); err != nil {
+		logger.Fatal("❌ Помилка запуску сервера", zap.Error(err))
+	}
 }

@@ -6,6 +6,7 @@ import (
 	"golang-server/ent/predicate"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 // ID filters vertices based on their ID field.
@@ -401,6 +402,52 @@ func LastNameEqualFold(v string) predicate.User {
 // LastNameContainsFold applies the ContainsFold predicate on the "last_name" field.
 func LastNameContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldLastName, v))
+}
+
+// HasBaskets applies the HasEdge predicate on the "baskets" edge.
+func HasBaskets() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, BasketsTable, BasketsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBasketsWith applies the HasEdge predicate on the "baskets" edge with a given conditions (other predicates).
+func HasBasketsWith(preds ...predicate.Basket) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newBasketsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOrders applies the HasEdge predicate on the "orders" edge.
+func HasOrders() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OrdersTable, OrdersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOrdersWith applies the HasEdge predicate on the "orders" edge with a given conditions (other predicates).
+func HasOrdersWith(preds ...predicate.Order) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newOrdersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

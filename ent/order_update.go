@@ -9,6 +9,7 @@ import (
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/predicate"
+	"golang-server/ent/user"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -99,6 +100,55 @@ func (ou *OrderUpdate) SetNillableZip(s *string) *OrderUpdate {
 	return ou
 }
 
+// SetUserID sets the "user_id" field.
+func (ou *OrderUpdate) SetUserID(i int) *OrderUpdate {
+	ou.mutation.SetUserID(i)
+	return ou
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (ou *OrderUpdate) SetNillableUserID(i *int) *OrderUpdate {
+	if i != nil {
+		ou.SetUserID(*i)
+	}
+	return ou
+}
+
+// SetTotalPrice sets the "total_price" field.
+func (ou *OrderUpdate) SetTotalPrice(f float64) *OrderUpdate {
+	ou.mutation.ResetTotalPrice()
+	ou.mutation.SetTotalPrice(f)
+	return ou
+}
+
+// SetNillableTotalPrice sets the "total_price" field if the given value is not nil.
+func (ou *OrderUpdate) SetNillableTotalPrice(f *float64) *OrderUpdate {
+	if f != nil {
+		ou.SetTotalPrice(*f)
+	}
+	return ou
+}
+
+// AddTotalPrice adds f to the "total_price" field.
+func (ou *OrderUpdate) AddTotalPrice(f float64) *OrderUpdate {
+	ou.mutation.AddTotalPrice(f)
+	return ou
+}
+
+// SetStatus sets the "status" field.
+func (ou *OrderUpdate) SetStatus(o order.Status) *OrderUpdate {
+	ou.mutation.SetStatus(o)
+	return ou
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (ou *OrderUpdate) SetNillableStatus(o *order.Status) *OrderUpdate {
+	if o != nil {
+		ou.SetStatus(*o)
+	}
+	return ou
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (ou *OrderUpdate) SetCreatedAt(t time.Time) *OrderUpdate {
 	ou.mutation.SetCreatedAt(t)
@@ -134,6 +184,11 @@ func (ou *OrderUpdate) AddOrderProducts(o ...*OrderProducts) *OrderUpdate {
 	return ou.AddOrderProductIDs(ids...)
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (ou *OrderUpdate) SetUser(u *User) *OrderUpdate {
+	return ou.SetUserID(u.ID)
+}
+
 // Mutation returns the OrderMutation object of the builder.
 func (ou *OrderUpdate) Mutation() *OrderMutation {
 	return ou.mutation
@@ -158,6 +213,12 @@ func (ou *OrderUpdate) RemoveOrderProducts(o ...*OrderProducts) *OrderUpdate {
 		ids[i] = o[i].ID
 	}
 	return ou.RemoveOrderProductIDs(ids...)
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (ou *OrderUpdate) ClearUser() *OrderUpdate {
+	ou.mutation.ClearUser()
+	return ou
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -223,6 +284,19 @@ func (ou *OrderUpdate) check() error {
 			return &ValidationError{Name: "zip", err: fmt.Errorf(`ent: validator failed for field "Order.zip": %w`, err)}
 		}
 	}
+	if v, ok := ou.mutation.TotalPrice(); ok {
+		if err := order.TotalPriceValidator(v); err != nil {
+			return &ValidationError{Name: "total_price", err: fmt.Errorf(`ent: validator failed for field "Order.total_price": %w`, err)}
+		}
+	}
+	if v, ok := ou.mutation.Status(); ok {
+		if err := order.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Order.status": %w`, err)}
+		}
+	}
+	if ou.mutation.UserCleared() && len(ou.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Order.user"`)
+	}
 	return nil
 }
 
@@ -252,6 +326,15 @@ func (ou *OrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := ou.mutation.Zip(); ok {
 		_spec.SetField(order.FieldZip, field.TypeString, value)
+	}
+	if value, ok := ou.mutation.TotalPrice(); ok {
+		_spec.SetField(order.FieldTotalPrice, field.TypeFloat64, value)
+	}
+	if value, ok := ou.mutation.AddedTotalPrice(); ok {
+		_spec.AddField(order.FieldTotalPrice, field.TypeFloat64, value)
+	}
+	if value, ok := ou.mutation.Status(); ok {
+		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := ou.mutation.CreatedAt(); ok {
 		_spec.SetField(order.FieldCreatedAt, field.TypeTime, value)
@@ -297,6 +380,35 @@ func (ou *OrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(orderproducts.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ou.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   order.UserTable,
+			Columns: []string{order.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ou.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   order.UserTable,
+			Columns: []string{order.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -394,6 +506,55 @@ func (ouo *OrderUpdateOne) SetNillableZip(s *string) *OrderUpdateOne {
 	return ouo
 }
 
+// SetUserID sets the "user_id" field.
+func (ouo *OrderUpdateOne) SetUserID(i int) *OrderUpdateOne {
+	ouo.mutation.SetUserID(i)
+	return ouo
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (ouo *OrderUpdateOne) SetNillableUserID(i *int) *OrderUpdateOne {
+	if i != nil {
+		ouo.SetUserID(*i)
+	}
+	return ouo
+}
+
+// SetTotalPrice sets the "total_price" field.
+func (ouo *OrderUpdateOne) SetTotalPrice(f float64) *OrderUpdateOne {
+	ouo.mutation.ResetTotalPrice()
+	ouo.mutation.SetTotalPrice(f)
+	return ouo
+}
+
+// SetNillableTotalPrice sets the "total_price" field if the given value is not nil.
+func (ouo *OrderUpdateOne) SetNillableTotalPrice(f *float64) *OrderUpdateOne {
+	if f != nil {
+		ouo.SetTotalPrice(*f)
+	}
+	return ouo
+}
+
+// AddTotalPrice adds f to the "total_price" field.
+func (ouo *OrderUpdateOne) AddTotalPrice(f float64) *OrderUpdateOne {
+	ouo.mutation.AddTotalPrice(f)
+	return ouo
+}
+
+// SetStatus sets the "status" field.
+func (ouo *OrderUpdateOne) SetStatus(o order.Status) *OrderUpdateOne {
+	ouo.mutation.SetStatus(o)
+	return ouo
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (ouo *OrderUpdateOne) SetNillableStatus(o *order.Status) *OrderUpdateOne {
+	if o != nil {
+		ouo.SetStatus(*o)
+	}
+	return ouo
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (ouo *OrderUpdateOne) SetCreatedAt(t time.Time) *OrderUpdateOne {
 	ouo.mutation.SetCreatedAt(t)
@@ -429,6 +590,11 @@ func (ouo *OrderUpdateOne) AddOrderProducts(o ...*OrderProducts) *OrderUpdateOne
 	return ouo.AddOrderProductIDs(ids...)
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (ouo *OrderUpdateOne) SetUser(u *User) *OrderUpdateOne {
+	return ouo.SetUserID(u.ID)
+}
+
 // Mutation returns the OrderMutation object of the builder.
 func (ouo *OrderUpdateOne) Mutation() *OrderMutation {
 	return ouo.mutation
@@ -453,6 +619,12 @@ func (ouo *OrderUpdateOne) RemoveOrderProducts(o ...*OrderProducts) *OrderUpdate
 		ids[i] = o[i].ID
 	}
 	return ouo.RemoveOrderProductIDs(ids...)
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (ouo *OrderUpdateOne) ClearUser() *OrderUpdateOne {
+	ouo.mutation.ClearUser()
+	return ouo
 }
 
 // Where appends a list predicates to the OrderUpdate builder.
@@ -531,6 +703,19 @@ func (ouo *OrderUpdateOne) check() error {
 			return &ValidationError{Name: "zip", err: fmt.Errorf(`ent: validator failed for field "Order.zip": %w`, err)}
 		}
 	}
+	if v, ok := ouo.mutation.TotalPrice(); ok {
+		if err := order.TotalPriceValidator(v); err != nil {
+			return &ValidationError{Name: "total_price", err: fmt.Errorf(`ent: validator failed for field "Order.total_price": %w`, err)}
+		}
+	}
+	if v, ok := ouo.mutation.Status(); ok {
+		if err := order.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Order.status": %w`, err)}
+		}
+	}
+	if ouo.mutation.UserCleared() && len(ouo.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Order.user"`)
+	}
 	return nil
 }
 
@@ -578,6 +763,15 @@ func (ouo *OrderUpdateOne) sqlSave(ctx context.Context) (_node *Order, err error
 	if value, ok := ouo.mutation.Zip(); ok {
 		_spec.SetField(order.FieldZip, field.TypeString, value)
 	}
+	if value, ok := ouo.mutation.TotalPrice(); ok {
+		_spec.SetField(order.FieldTotalPrice, field.TypeFloat64, value)
+	}
+	if value, ok := ouo.mutation.AddedTotalPrice(); ok {
+		_spec.AddField(order.FieldTotalPrice, field.TypeFloat64, value)
+	}
+	if value, ok := ouo.mutation.Status(); ok {
+		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
+	}
 	if value, ok := ouo.mutation.CreatedAt(); ok {
 		_spec.SetField(order.FieldCreatedAt, field.TypeTime, value)
 	}
@@ -622,6 +816,35 @@ func (ouo *OrderUpdateOne) sqlSave(ctx context.Context) (_node *Order, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(orderproducts.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ouo.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   order.UserTable,
+			Columns: []string{order.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ouo.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   order.UserTable,
+			Columns: []string{order.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -8,6 +8,42 @@ import (
 )
 
 var (
+	// BasketsColumns holds the columns for the "baskets" table.
+	BasketsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "product_id", Type: field.TypeInt},
+		{Name: "quantity", Type: field.TypeInt},
+		{Name: "price", Type: field.TypeFloat64},
+		{Name: "added_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeInt},
+	}
+	// BasketsTable holds the schema information for the "baskets" table.
+	BasketsTable = &schema.Table{
+		Name:       "baskets",
+		Columns:    BasketsColumns,
+		PrimaryKey: []*schema.Column{BasketsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "baskets_users_baskets",
+				Columns:    []*schema.Column{BasketsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "basket_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{BasketsColumns[6]},
+			},
+			{
+				Name:    "basket_user_id_product_id",
+				Unique:  true,
+				Columns: []*schema.Column{BasketsColumns[6], BasketsColumns[1]},
+			},
+		},
+	}
 	// OrdersColumns holds the columns for the "orders" table.
 	OrdersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -16,14 +52,25 @@ var (
 		{Name: "city", Type: field.TypeString},
 		{Name: "state", Type: field.TypeString},
 		{Name: "zip", Type: field.TypeString},
+		{Name: "total_price", Type: field.TypeFloat64},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"NEW", "IN_PROGRESS", "COMPLETED", "CANCELED"}},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeInt},
 	}
 	// OrdersTable holds the schema information for the "orders" table.
 	OrdersTable = &schema.Table{
 		Name:       "orders",
 		Columns:    OrdersColumns,
 		PrimaryKey: []*schema.Column{OrdersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "orders_users_orders",
+				Columns:    []*schema.Column{OrdersColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// OrderProductsColumns holds the columns for the "order_products" table.
 	OrderProductsColumns = []*schema.Column{
@@ -32,7 +79,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "order_order_products", Type: field.TypeInt},
-		{Name: "product_order_products", Type: field.TypeInt},
+		{Name: "product_order_products", Type: field.TypeInt, Nullable: true},
 	}
 	// OrderProductsTable holds the schema information for the "order_products" table.
 	OrderProductsTable = &schema.Table{
@@ -50,7 +97,7 @@ var (
 				Symbol:     "order_products_products_order_products",
 				Columns:    []*schema.Column{OrderProductsColumns[5]},
 				RefColumns: []*schema.Column{ProductsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -105,6 +152,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		BasketsTable,
 		OrdersTable,
 		OrderProductsTable,
 		ProductsTable,
@@ -113,6 +161,8 @@ var (
 )
 
 func init() {
+	BasketsTable.ForeignKeys[0].RefTable = UsersTable
+	OrdersTable.ForeignKeys[0].RefTable = UsersTable
 	OrderProductsTable.ForeignKeys[0].RefTable = OrdersTable
 	OrderProductsTable.ForeignKeys[1].RefTable = ProductsTable
 }

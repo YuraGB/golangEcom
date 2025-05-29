@@ -8,7 +8,6 @@ import (
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/predicate"
-	"golang-server/ent/product"
 	"math"
 
 	"entgo.io/ent"
@@ -20,13 +19,12 @@ import (
 // OrderProductsQuery is the builder for querying OrderProducts entities.
 type OrderProductsQuery struct {
 	config
-	ctx         *QueryContext
-	order       []orderproducts.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.OrderProducts
-	withOrder   *OrderQuery
-	withProduct *ProductQuery
-	withFKs     bool
+	ctx        *QueryContext
+	order      []orderproducts.OrderOption
+	inters     []Interceptor
+	predicates []predicate.OrderProducts
+	withOrder  *OrderQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -78,28 +76,6 @@ func (opq *OrderProductsQuery) QueryOrder() *OrderQuery {
 			sqlgraph.From(orderproducts.Table, orderproducts.FieldID, selector),
 			sqlgraph.To(order.Table, order.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, orderproducts.OrderTable, orderproducts.OrderColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(opq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryProduct chains the current query on the "product" edge.
-func (opq *OrderProductsQuery) QueryProduct() *ProductQuery {
-	query := (&ProductClient{config: opq.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := opq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := opq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(orderproducts.Table, orderproducts.FieldID, selector),
-			sqlgraph.To(product.Table, product.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, orderproducts.ProductTable, orderproducts.ProductColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(opq.driver.Dialect(), step)
 		return fromU, nil
@@ -294,13 +270,12 @@ func (opq *OrderProductsQuery) Clone() *OrderProductsQuery {
 		return nil
 	}
 	return &OrderProductsQuery{
-		config:      opq.config,
-		ctx:         opq.ctx.Clone(),
-		order:       append([]orderproducts.OrderOption{}, opq.order...),
-		inters:      append([]Interceptor{}, opq.inters...),
-		predicates:  append([]predicate.OrderProducts{}, opq.predicates...),
-		withOrder:   opq.withOrder.Clone(),
-		withProduct: opq.withProduct.Clone(),
+		config:     opq.config,
+		ctx:        opq.ctx.Clone(),
+		order:      append([]orderproducts.OrderOption{}, opq.order...),
+		inters:     append([]Interceptor{}, opq.inters...),
+		predicates: append([]predicate.OrderProducts{}, opq.predicates...),
+		withOrder:  opq.withOrder.Clone(),
 		// clone intermediate query.
 		sql:  opq.sql.Clone(),
 		path: opq.path,
@@ -315,17 +290,6 @@ func (opq *OrderProductsQuery) WithOrder(opts ...func(*OrderQuery)) *OrderProduc
 		opt(query)
 	}
 	opq.withOrder = query
-	return opq
-}
-
-// WithProduct tells the query-builder to eager-load the nodes that are connected to
-// the "product" edge. The optional arguments are used to configure the query builder of the edge.
-func (opq *OrderProductsQuery) WithProduct(opts ...func(*ProductQuery)) *OrderProductsQuery {
-	query := (&ProductClient{config: opq.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	opq.withProduct = query
 	return opq
 }
 
@@ -408,12 +372,11 @@ func (opq *OrderProductsQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		nodes       = []*OrderProducts{}
 		withFKs     = opq.withFKs
 		_spec       = opq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [1]bool{
 			opq.withOrder != nil,
-			opq.withProduct != nil,
 		}
 	)
-	if opq.withOrder != nil || opq.withProduct != nil {
+	if opq.withOrder != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -440,12 +403,6 @@ func (opq *OrderProductsQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if query := opq.withOrder; query != nil {
 		if err := opq.loadOrder(ctx, query, nodes, nil,
 			func(n *OrderProducts, e *Order) { n.Edges.Order = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := opq.withProduct; query != nil {
-		if err := opq.loadProduct(ctx, query, nodes, nil,
-			func(n *OrderProducts, e *Product) { n.Edges.Product = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -477,38 +434,6 @@ func (opq *OrderProductsQuery) loadOrder(ctx context.Context, query *OrderQuery,
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "order_order_products" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (opq *OrderProductsQuery) loadProduct(ctx context.Context, query *ProductQuery, nodes []*OrderProducts, init func(*OrderProducts), assign func(*OrderProducts, *Product)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*OrderProducts)
-	for i := range nodes {
-		if nodes[i].product_order_products == nil {
-			continue
-		}
-		fk := *nodes[i].product_order_products
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(product.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "product_order_products" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

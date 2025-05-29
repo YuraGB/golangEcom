@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
-	"golang-server/ent/product"
 	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -65,17 +64,6 @@ func (opc *OrderProductsCreate) SetOrderID(id int) *OrderProductsCreate {
 // SetOrder sets the "order" edge to the Order entity.
 func (opc *OrderProductsCreate) SetOrder(o *Order) *OrderProductsCreate {
 	return opc.SetOrderID(o.ID)
-}
-
-// SetProductID sets the "product" edge to the Product entity by ID.
-func (opc *OrderProductsCreate) SetProductID(id int) *OrderProductsCreate {
-	opc.mutation.SetProductID(id)
-	return opc
-}
-
-// SetProduct sets the "product" edge to the Product entity.
-func (opc *OrderProductsCreate) SetProduct(p *Product) *OrderProductsCreate {
-	return opc.SetProductID(p.ID)
 }
 
 // Mutation returns the OrderProductsMutation object of the builder.
@@ -142,9 +130,6 @@ func (opc *OrderProductsCreate) check() error {
 	if len(opc.mutation.OrderIDs()) == 0 {
 		return &ValidationError{Name: "order", err: errors.New(`ent: missing required edge "OrderProducts.order"`)}
 	}
-	if len(opc.mutation.ProductIDs()) == 0 {
-		return &ValidationError{Name: "product", err: errors.New(`ent: missing required edge "OrderProducts.product"`)}
-	}
 	return nil
 }
 
@@ -198,23 +183,6 @@ func (opc *OrderProductsCreate) createSpec() (*OrderProducts, *sqlgraph.CreateSp
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.order_order_products = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := opc.mutation.ProductIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   orderproducts.ProductTable,
-			Columns: []string{orderproducts.ProductColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.product_order_products = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

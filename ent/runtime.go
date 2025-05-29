@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"golang-server/ent/basket"
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/product"
@@ -15,6 +16,38 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	basketFields := schema.Basket{}.Fields()
+	_ = basketFields
+	// basketDescUserID is the schema descriptor for user_id field.
+	basketDescUserID := basketFields[1].Descriptor()
+	// basket.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	basket.UserIDValidator = basketDescUserID.Validators[0].(func(int) error)
+	// basketDescProductID is the schema descriptor for product_id field.
+	basketDescProductID := basketFields[2].Descriptor()
+	// basket.ProductIDValidator is a validator for the "product_id" field. It is called by the builders before save.
+	basket.ProductIDValidator = basketDescProductID.Validators[0].(func(int) error)
+	// basketDescQuantity is the schema descriptor for quantity field.
+	basketDescQuantity := basketFields[3].Descriptor()
+	// basket.QuantityValidator is a validator for the "quantity" field. It is called by the builders before save.
+	basket.QuantityValidator = basketDescQuantity.Validators[0].(func(int) error)
+	// basketDescPrice is the schema descriptor for price field.
+	basketDescPrice := basketFields[4].Descriptor()
+	// basket.PriceValidator is a validator for the "price" field. It is called by the builders before save.
+	basket.PriceValidator = basketDescPrice.Validators[0].(func(float64) error)
+	// basketDescAddedAt is the schema descriptor for added_at field.
+	basketDescAddedAt := basketFields[5].Descriptor()
+	// basket.DefaultAddedAt holds the default value on creation for the added_at field.
+	basket.DefaultAddedAt = basketDescAddedAt.Default.(func() time.Time)
+	// basketDescUpdatedAt is the schema descriptor for updated_at field.
+	basketDescUpdatedAt := basketFields[6].Descriptor()
+	// basket.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	basket.DefaultUpdatedAt = basketDescUpdatedAt.Default.(func() time.Time)
+	// basket.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	basket.UpdateDefaultUpdatedAt = basketDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// basketDescID is the schema descriptor for id field.
+	basketDescID := basketFields[0].Descriptor()
+	// basket.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	basket.IDValidator = basketDescID.Validators[0].(func(int) error)
 	orderFields := schema.Order{}.Fields()
 	_ = orderFields
 	// orderDescAddress is the schema descriptor for address field.
@@ -33,12 +66,16 @@ func init() {
 	orderDescZip := orderFields[4].Descriptor()
 	// order.ZipValidator is a validator for the "zip" field. It is called by the builders before save.
 	order.ZipValidator = orderDescZip.Validators[0].(func(string) error)
+	// orderDescTotalPrice is the schema descriptor for total_price field.
+	orderDescTotalPrice := orderFields[6].Descriptor()
+	// order.TotalPriceValidator is a validator for the "total_price" field. It is called by the builders before save.
+	order.TotalPriceValidator = orderDescTotalPrice.Validators[0].(func(float64) error)
 	// orderDescCreatedAt is the schema descriptor for created_at field.
-	orderDescCreatedAt := orderFields[5].Descriptor()
+	orderDescCreatedAt := orderFields[8].Descriptor()
 	// order.DefaultCreatedAt holds the default value on creation for the created_at field.
 	order.DefaultCreatedAt = orderDescCreatedAt.Default.(func() time.Time)
 	// orderDescUpdatedAt is the schema descriptor for updated_at field.
-	orderDescUpdatedAt := orderFields[6].Descriptor()
+	orderDescUpdatedAt := orderFields[9].Descriptor()
 	// order.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	order.DefaultUpdatedAt = orderDescUpdatedAt.Default.(func() time.Time)
 	// order.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

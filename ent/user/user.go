@@ -4,6 +4,7 @@ package user
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -21,8 +22,26 @@ const (
 	FieldGender = "gender"
 	// FieldLastName holds the string denoting the last_name field in the database.
 	FieldLastName = "last_name"
+	// EdgeBaskets holds the string denoting the baskets edge name in mutations.
+	EdgeBaskets = "baskets"
+	// EdgeOrders holds the string denoting the orders edge name in mutations.
+	EdgeOrders = "orders"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// BasketsTable is the table that holds the baskets relation/edge.
+	BasketsTable = "baskets"
+	// BasketsInverseTable is the table name for the Basket entity.
+	// It exists in this package in order to avoid circular dependency with the "basket" package.
+	BasketsInverseTable = "baskets"
+	// BasketsColumn is the table column denoting the baskets relation/edge.
+	BasketsColumn = "user_id"
+	// OrdersTable is the table that holds the orders relation/edge.
+	OrdersTable = "orders"
+	// OrdersInverseTable is the table name for the Order entity.
+	// It exists in this package in order to avoid circular dependency with the "order" package.
+	OrdersInverseTable = "orders"
+	// OrdersColumn is the table column denoting the orders relation/edge.
+	OrdersColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -89,4 +108,46 @@ func ByGender(opts ...sql.OrderTermOption) OrderOption {
 // ByLastName orders the results by the last_name field.
 func ByLastName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastName, opts...).ToFunc()
+}
+
+// ByBasketsCount orders the results by baskets count.
+func ByBasketsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBasketsStep(), opts...)
+	}
+}
+
+// ByBaskets orders the results by baskets terms.
+func ByBaskets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBasketsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOrdersCount orders the results by orders count.
+func ByOrdersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOrdersStep(), opts...)
+	}
+}
+
+// ByOrders orders the results by orders terms.
+func ByOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newBasketsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BasketsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BasketsTable, BasketsColumn),
+	)
+}
+func newOrdersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OrdersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OrdersTable, OrdersColumn),
+	)
 }

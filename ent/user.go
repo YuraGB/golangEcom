@@ -25,8 +25,40 @@ type User struct {
 	// Gender holds the value of the "gender" field.
 	Gender string `json:"gender,omitempty"`
 	// LastName holds the value of the "last_name" field.
-	LastName     string `json:"last_name,omitempty"`
+	LastName string `json:"last_name,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserQuery when eager-loading is set.
+	Edges        UserEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// UserEdges holds the relations/edges for other nodes in the graph.
+type UserEdges struct {
+	// Baskets holds the value of the baskets edge.
+	Baskets []*Basket `json:"baskets,omitempty"`
+	// Orders holds the value of the orders edge.
+	Orders []*Order `json:"orders,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// BasketsOrErr returns the Baskets value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) BasketsOrErr() ([]*Basket, error) {
+	if e.loadedTypes[0] {
+		return e.Baskets, nil
+	}
+	return nil, &NotLoadedError{edge: "baskets"}
+}
+
+// OrdersOrErr returns the Orders value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) OrdersOrErr() ([]*Order, error) {
+	if e.loadedTypes[1] {
+		return e.Orders, nil
+	}
+	return nil, &NotLoadedError{edge: "orders"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -100,6 +132,16 @@ func (u *User) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
+}
+
+// QueryBaskets queries the "baskets" edge of the User entity.
+func (u *User) QueryBaskets() *BasketQuery {
+	return NewUserClient(u.config).QueryBaskets(u)
+}
+
+// QueryOrders queries the "orders" edge of the User entity.
+func (u *User) QueryOrders() *OrderQuery {
+	return NewUserClient(u.config).QueryOrders(u)
 }
 
 // Update returns a builder for updating this User.

@@ -9,6 +9,7 @@ import (
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/predicate"
+	"golang-server/ent/user"
 	"math"
 
 	"entgo.io/ent"
@@ -25,6 +26,7 @@ type OrderQuery struct {
 	inters            []Interceptor
 	predicates        []predicate.Order
 	withOrderProducts *OrderProductsQuery
+	withUser          *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +78,28 @@ func (oq *OrderQuery) QueryOrderProducts() *OrderProductsQuery {
 			sqlgraph.From(order.Table, order.FieldID, selector),
 			sqlgraph.To(orderproducts.Table, orderproducts.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, order.OrderProductsTable, order.OrderProductsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(oq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUser chains the current query on the "user" edge.
+func (oq *OrderQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: oq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := oq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := oq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(order.Table, order.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, order.UserTable, order.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(oq.driver.Dialect(), step)
 		return fromU, nil
@@ -276,6 +300,7 @@ func (oq *OrderQuery) Clone() *OrderQuery {
 		inters:            append([]Interceptor{}, oq.inters...),
 		predicates:        append([]predicate.Order{}, oq.predicates...),
 		withOrderProducts: oq.withOrderProducts.Clone(),
+		withUser:          oq.withUser.Clone(),
 		// clone intermediate query.
 		sql:  oq.sql.Clone(),
 		path: oq.path,
@@ -290,6 +315,17 @@ func (oq *OrderQuery) WithOrderProducts(opts ...func(*OrderProductsQuery)) *Orde
 		opt(query)
 	}
 	oq.withOrderProducts = query
+	return oq
+}
+
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (oq *OrderQuery) WithUser(opts ...func(*UserQuery)) *OrderQuery {
+	query := (&UserClient{config: oq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	oq.withUser = query
 	return oq
 }
 
@@ -371,8 +407,9 @@ func (oq *OrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Order,
 	var (
 		nodes       = []*Order{}
 		_spec       = oq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			oq.withOrderProducts != nil,
+			oq.withUser != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -397,6 +434,12 @@ func (oq *OrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Order,
 		if err := oq.loadOrderProducts(ctx, query, nodes,
 			func(n *Order) { n.Edges.OrderProducts = []*OrderProducts{} },
 			func(n *Order, e *OrderProducts) { n.Edges.OrderProducts = append(n.Edges.OrderProducts, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := oq.withUser; query != nil {
+		if err := oq.loadUser(ctx, query, nodes, nil,
+			func(n *Order, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -434,6 +477,35 @@ func (oq *OrderQuery) loadOrderProducts(ctx context.Context, query *OrderProduct
 	}
 	return nil
 }
+func (oq *OrderQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Order, init func(*Order), assign func(*Order, *User)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*Order)
+	for i := range nodes {
+		fk := nodes[i].UserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (oq *OrderQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := oq.querySpec()
@@ -459,6 +531,9 @@ func (oq *OrderQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != order.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if oq.withUser != nil {
+			_spec.Node.AddColumnOnce(order.FieldUserID)
 		}
 	}
 	if ps := oq.predicates; len(ps) > 0 {

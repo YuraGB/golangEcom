@@ -25,12 +25,20 @@ const (
 	FieldState = "state"
 	// FieldZip holds the string denoting the zip field in the database.
 	FieldZip = "zip"
+	// FieldUserID holds the string denoting the user_id field in the database.
+	FieldUserID = "user_id"
+	// FieldTotalPrice holds the string denoting the total_price field in the database.
+	FieldTotalPrice = "total_price"
+	// FieldStatus holds the string denoting the status field in the database.
+	FieldStatus = "status"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 	// EdgeOrderProducts holds the string denoting the order_products edge name in mutations.
 	EdgeOrderProducts = "order_products"
+	// EdgeUser holds the string denoting the user edge name in mutations.
+	EdgeUser = "user"
 	// Table holds the table name of the order in the database.
 	Table = "orders"
 	// OrderProductsTable is the table that holds the order_products relation/edge.
@@ -40,6 +48,13 @@ const (
 	OrderProductsInverseTable = "order_products"
 	// OrderProductsColumn is the table column denoting the order_products relation/edge.
 	OrderProductsColumn = "order_order_products"
+	// UserTable is the table that holds the user relation/edge.
+	UserTable = "orders"
+	// UserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	UserInverseTable = "users"
+	// UserColumn is the table column denoting the user relation/edge.
+	UserColumn = "user_id"
 )
 
 // Columns holds all SQL columns for order fields.
@@ -50,6 +65,9 @@ var Columns = []string{
 	FieldCity,
 	FieldState,
 	FieldZip,
+	FieldUserID,
+	FieldTotalPrice,
+	FieldStatus,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -73,6 +91,8 @@ var (
 	StateValidator func(string) error
 	// ZipValidator is a validator for the "zip" field. It is called by the builders before save.
 	ZipValidator func(string) error
+	// TotalPriceValidator is a validator for the "total_price" field. It is called by the builders before save.
+	TotalPriceValidator func(float64) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -101,6 +121,31 @@ func PaymentTypeValidator(pt PaymentType) error {
 		return nil
 	default:
 		return fmt.Errorf("order: invalid enum value for paymentType field: %q", pt)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// Status values.
+const (
+	StatusNEW         Status = "NEW"
+	StatusIN_PROGRESS Status = "IN_PROGRESS"
+	StatusCOMPLETED   Status = "COMPLETED"
+	StatusCANCELED    Status = "CANCELED"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusNEW, StatusIN_PROGRESS, StatusCOMPLETED, StatusCANCELED:
+		return nil
+	default:
+		return fmt.Errorf("order: invalid enum value for status field: %q", s)
 	}
 }
 
@@ -137,6 +182,21 @@ func ByZip(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldZip, opts...).ToFunc()
 }
 
+// ByUserID orders the results by the user_id field.
+func ByUserID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+}
+
+// ByTotalPrice orders the results by the total_price field.
+func ByTotalPrice(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTotalPrice, opts...).ToFunc()
+}
+
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -160,10 +220,24 @@ func ByOrderProducts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newOrderProductsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByUserField orders the results by user field.
+func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUserStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newOrderProductsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OrderProductsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OrderProductsTable, OrderProductsColumn),
+	)
+}
+func newUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
 	)
 }

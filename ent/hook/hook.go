@@ -8,6 +8,18 @@ import (
 	"golang-server/ent"
 )
 
+// The BasketFunc type is an adapter to allow the use of ordinary
+// function as Basket mutator.
+type BasketFunc func(context.Context, *ent.BasketMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BasketFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BasketMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BasketMutation", m)
+}
+
 // The OrderFunc type is an adapter to allow the use of ordinary
 // function as Order mutator.
 type OrderFunc func(context.Context, *ent.OrderMutation) (ent.Value, error)

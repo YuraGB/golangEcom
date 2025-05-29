@@ -9,7 +9,6 @@ import (
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/predicate"
-	"golang-server/ent/product"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -82,17 +81,6 @@ func (opu *OrderProductsUpdate) SetOrder(o *Order) *OrderProductsUpdate {
 	return opu.SetOrderID(o.ID)
 }
 
-// SetProductID sets the "product" edge to the Product entity by ID.
-func (opu *OrderProductsUpdate) SetProductID(id int) *OrderProductsUpdate {
-	opu.mutation.SetProductID(id)
-	return opu
-}
-
-// SetProduct sets the "product" edge to the Product entity.
-func (opu *OrderProductsUpdate) SetProduct(p *Product) *OrderProductsUpdate {
-	return opu.SetProductID(p.ID)
-}
-
 // Mutation returns the OrderProductsMutation object of the builder.
 func (opu *OrderProductsUpdate) Mutation() *OrderProductsMutation {
 	return opu.mutation
@@ -101,12 +89,6 @@ func (opu *OrderProductsUpdate) Mutation() *OrderProductsMutation {
 // ClearOrder clears the "order" edge to the Order entity.
 func (opu *OrderProductsUpdate) ClearOrder() *OrderProductsUpdate {
 	opu.mutation.ClearOrder()
-	return opu
-}
-
-// ClearProduct clears the "product" edge to the Product entity.
-func (opu *OrderProductsUpdate) ClearProduct() *OrderProductsUpdate {
-	opu.mutation.ClearProduct()
 	return opu
 }
 
@@ -155,9 +137,6 @@ func (opu *OrderProductsUpdate) check() error {
 	}
 	if opu.mutation.OrderCleared() && len(opu.mutation.OrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OrderProducts.order"`)
-	}
-	if opu.mutation.ProductCleared() && len(opu.mutation.ProductIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "OrderProducts.product"`)
 	}
 	return nil
 }
@@ -208,35 +187,6 @@ func (opu *OrderProductsUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(order.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if opu.mutation.ProductCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   orderproducts.ProductTable,
-			Columns: []string{orderproducts.ProductColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := opu.mutation.ProductIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   orderproducts.ProductTable,
-			Columns: []string{orderproducts.ProductColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -316,17 +266,6 @@ func (opuo *OrderProductsUpdateOne) SetOrder(o *Order) *OrderProductsUpdateOne {
 	return opuo.SetOrderID(o.ID)
 }
 
-// SetProductID sets the "product" edge to the Product entity by ID.
-func (opuo *OrderProductsUpdateOne) SetProductID(id int) *OrderProductsUpdateOne {
-	opuo.mutation.SetProductID(id)
-	return opuo
-}
-
-// SetProduct sets the "product" edge to the Product entity.
-func (opuo *OrderProductsUpdateOne) SetProduct(p *Product) *OrderProductsUpdateOne {
-	return opuo.SetProductID(p.ID)
-}
-
 // Mutation returns the OrderProductsMutation object of the builder.
 func (opuo *OrderProductsUpdateOne) Mutation() *OrderProductsMutation {
 	return opuo.mutation
@@ -335,12 +274,6 @@ func (opuo *OrderProductsUpdateOne) Mutation() *OrderProductsMutation {
 // ClearOrder clears the "order" edge to the Order entity.
 func (opuo *OrderProductsUpdateOne) ClearOrder() *OrderProductsUpdateOne {
 	opuo.mutation.ClearOrder()
-	return opuo
-}
-
-// ClearProduct clears the "product" edge to the Product entity.
-func (opuo *OrderProductsUpdateOne) ClearProduct() *OrderProductsUpdateOne {
-	opuo.mutation.ClearProduct()
 	return opuo
 }
 
@@ -402,9 +335,6 @@ func (opuo *OrderProductsUpdateOne) check() error {
 	}
 	if opuo.mutation.OrderCleared() && len(opuo.mutation.OrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OrderProducts.order"`)
-	}
-	if opuo.mutation.ProductCleared() && len(opuo.mutation.ProductIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "OrderProducts.product"`)
 	}
 	return nil
 }
@@ -472,35 +402,6 @@ func (opuo *OrderProductsUpdateOne) sqlSave(ctx context.Context) (_node *OrderPr
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(order.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if opuo.mutation.ProductCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   orderproducts.ProductTable,
-			Columns: []string{orderproducts.ProductColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := opuo.mutation.ProductIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   orderproducts.ProductTable,
-			Columns: []string{orderproducts.ProductColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -12,13 +12,17 @@ import (
 )
 
 func RegisterRoutes(app *fiber.App, db *ent.Client, logger *zap.Logger) {
-	
 	// Middleware
 	app.Use(config.RecoverConfig())
 	app.Use(config.LoggerConfig())
 	app.Use(config.CorsConfig())
 	app.Use(config.HelmetConfig())
 	app.Use(config.LimiterConfig())
+	app.Use(config.DebugJWTMiddleware())
+	// app.Use(fiber.Config{
+	// 	StrictRouting: false, // або true — але тоді треба враховувати слеші вручну
+	// 	CaseSensitive: true,
+	// })
 	// app.Use(config.CsrfConfig())
 
 	// db connection middleware
@@ -32,6 +36,8 @@ func RegisterRoutes(app *fiber.App, db *ent.Client, logger *zap.Logger) {
 	RegisterProductsRoutes(api)
 	RegisterPostRoutes(api)
 	RegisterCategoryRoutes(api)
+	RegisterSearchRoute(api)
+	RegisterOrderRoutes(api)
 
 	// non-case "/api"
 	app.Use("/api", func(c *fiber.Ctx) error {

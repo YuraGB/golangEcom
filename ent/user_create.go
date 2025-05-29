@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang-server/ent/basket"
+	"golang-server/ent/order"
 	"golang-server/ent/user"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -55,6 +57,36 @@ func (uc *UserCreate) SetNillableGender(s *string) *UserCreate {
 func (uc *UserCreate) SetLastName(s string) *UserCreate {
 	uc.mutation.SetLastName(s)
 	return uc
+}
+
+// AddBasketIDs adds the "baskets" edge to the Basket entity by IDs.
+func (uc *UserCreate) AddBasketIDs(ids ...int) *UserCreate {
+	uc.mutation.AddBasketIDs(ids...)
+	return uc
+}
+
+// AddBaskets adds the "baskets" edges to the Basket entity.
+func (uc *UserCreate) AddBaskets(b ...*Basket) *UserCreate {
+	ids := make([]int, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return uc.AddBasketIDs(ids...)
+}
+
+// AddOrderIDs adds the "orders" edge to the Order entity by IDs.
+func (uc *UserCreate) AddOrderIDs(ids ...int) *UserCreate {
+	uc.mutation.AddOrderIDs(ids...)
+	return uc
+}
+
+// AddOrders adds the "orders" edges to the Order entity.
+func (uc *UserCreate) AddOrders(o ...*Order) *UserCreate {
+	ids := make([]int, len(o))
+	for i := range o {
+		ids[i] = o[i].ID
+	}
+	return uc.AddOrderIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -180,6 +212,38 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.LastName(); ok {
 		_spec.SetField(user.FieldLastName, field.TypeString, value)
 		_node.LastName = value
+	}
+	if nodes := uc.mutation.BasketsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BasketsTable,
+			Columns: []string{user.BasketsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(basket.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.OrdersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OrdersTable,
+			Columns: []string{user.OrdersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(order.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang-server/ent/basket"
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/product"
@@ -76,6 +77,7 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			basket.Table:        basket.ValidColumn,
 			order.Table:         order.ValidColumn,
 			orderproducts.Table: orderproducts.ValidColumn,
 			product.Table:       product.ValidColumn,

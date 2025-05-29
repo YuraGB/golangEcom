@@ -22,8 +22,6 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeOrder holds the string denoting the order edge name in mutations.
 	EdgeOrder = "order"
-	// EdgeProduct holds the string denoting the product edge name in mutations.
-	EdgeProduct = "product"
 	// Table holds the table name of the orderproducts in the database.
 	Table = "order_products"
 	// OrderTable is the table that holds the order relation/edge.
@@ -33,13 +31,6 @@ const (
 	OrderInverseTable = "orders"
 	// OrderColumn is the table column denoting the order relation/edge.
 	OrderColumn = "order_order_products"
-	// ProductTable is the table that holds the product relation/edge.
-	ProductTable = "order_products"
-	// ProductInverseTable is the table name for the Product entity.
-	// It exists in this package in order to avoid circular dependency with the "product" package.
-	ProductInverseTable = "products"
-	// ProductColumn is the table column denoting the product relation/edge.
-	ProductColumn = "product_order_products"
 )
 
 // Columns holds all SQL columns for orderproducts fields.
@@ -112,24 +103,10 @@ func ByOrderField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newOrderStep(), sql.OrderByField(field, opts...))
 	}
 }
-
-// ByProductField orders the results by product field.
-func ByProductField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProductStep(), sql.OrderByField(field, opts...))
-	}
-}
 func newOrderStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OrderInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, OrderTable, OrderColumn),
-	)
-}
-func newProductStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProductInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, ProductTable, ProductColumn),
 	)
 }

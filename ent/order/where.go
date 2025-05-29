@@ -75,6 +75,16 @@ func Zip(v string) predicate.Order {
 	return predicate.Order(sql.FieldEQ(FieldZip, v))
 }
 
+// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
+func UserID(v int) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldUserID, v))
+}
+
+// TotalPrice applies equality check predicate on the "total_price" field. It's identical to TotalPriceEQ.
+func TotalPrice(v float64) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldTotalPrice, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Order {
 	return predicate.Order(sql.FieldEQ(FieldCreatedAt, v))
@@ -365,6 +375,86 @@ func ZipContainsFold(v string) predicate.Order {
 	return predicate.Order(sql.FieldContainsFold(FieldZip, v))
 }
 
+// UserIDEQ applies the EQ predicate on the "user_id" field.
+func UserIDEQ(v int) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldUserID, v))
+}
+
+// UserIDNEQ applies the NEQ predicate on the "user_id" field.
+func UserIDNEQ(v int) predicate.Order {
+	return predicate.Order(sql.FieldNEQ(FieldUserID, v))
+}
+
+// UserIDIn applies the In predicate on the "user_id" field.
+func UserIDIn(vs ...int) predicate.Order {
+	return predicate.Order(sql.FieldIn(FieldUserID, vs...))
+}
+
+// UserIDNotIn applies the NotIn predicate on the "user_id" field.
+func UserIDNotIn(vs ...int) predicate.Order {
+	return predicate.Order(sql.FieldNotIn(FieldUserID, vs...))
+}
+
+// TotalPriceEQ applies the EQ predicate on the "total_price" field.
+func TotalPriceEQ(v float64) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldTotalPrice, v))
+}
+
+// TotalPriceNEQ applies the NEQ predicate on the "total_price" field.
+func TotalPriceNEQ(v float64) predicate.Order {
+	return predicate.Order(sql.FieldNEQ(FieldTotalPrice, v))
+}
+
+// TotalPriceIn applies the In predicate on the "total_price" field.
+func TotalPriceIn(vs ...float64) predicate.Order {
+	return predicate.Order(sql.FieldIn(FieldTotalPrice, vs...))
+}
+
+// TotalPriceNotIn applies the NotIn predicate on the "total_price" field.
+func TotalPriceNotIn(vs ...float64) predicate.Order {
+	return predicate.Order(sql.FieldNotIn(FieldTotalPrice, vs...))
+}
+
+// TotalPriceGT applies the GT predicate on the "total_price" field.
+func TotalPriceGT(v float64) predicate.Order {
+	return predicate.Order(sql.FieldGT(FieldTotalPrice, v))
+}
+
+// TotalPriceGTE applies the GTE predicate on the "total_price" field.
+func TotalPriceGTE(v float64) predicate.Order {
+	return predicate.Order(sql.FieldGTE(FieldTotalPrice, v))
+}
+
+// TotalPriceLT applies the LT predicate on the "total_price" field.
+func TotalPriceLT(v float64) predicate.Order {
+	return predicate.Order(sql.FieldLT(FieldTotalPrice, v))
+}
+
+// TotalPriceLTE applies the LTE predicate on the "total_price" field.
+func TotalPriceLTE(v float64) predicate.Order {
+	return predicate.Order(sql.FieldLTE(FieldTotalPrice, v))
+}
+
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v Status) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v Status) predicate.Order {
+	return predicate.Order(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...Status) predicate.Order {
+	return predicate.Order(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...Status) predicate.Order {
+	return predicate.Order(sql.FieldNotIn(FieldStatus, vs...))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Order {
 	return predicate.Order(sql.FieldEQ(FieldCreatedAt, v))
@@ -460,6 +550,29 @@ func HasOrderProducts() predicate.Order {
 func HasOrderProductsWith(preds ...predicate.OrderProducts) predicate.Order {
 	return predicate.Order(func(s *sql.Selector) {
 		step := newOrderProductsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUser applies the HasEdge predicate on the "user" edge.
+func HasUser() predicate.Order {
+	return predicate.Order(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.Order {
+	return predicate.Order(func(s *sql.Selector) {
+		step := newUserStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

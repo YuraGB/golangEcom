@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
 )
 
 // OrderProducts holds the schema definition for the OrderProducts entity.
@@ -26,11 +26,6 @@ func (OrderProducts) Fields() []ent.Field {
 func (OrderProducts) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("order", Order.Type).
-			Ref("order_products").
-			Unique().
-			Required(),
-
-		edge.From("product", Product.Type).
 			Ref("order_products").
 			Unique().
 			Required(),

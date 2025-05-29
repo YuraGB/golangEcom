@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"golang-server/ent"
 	"io"
 	"log"
 	"net/http"
@@ -37,4 +38,24 @@ func GetDataFromAPI(endpoint string, out interface{}) error {
 	}
 
 	return nil
+}
+
+func GetProductsByIDs(productIDs []int) ([]*ent.Product, error) {
+	var products []*ent.Product
+
+	// Перебираємо список ID та фетчимо кожен продукт
+	for _, id := range productIDs {
+		endpoint := fmt.Sprintf("/products/%d", id)
+		var product ent.Product
+
+		// Отримуємо продукт за його ID
+		if err := GetDataFromAPI(endpoint, &product); err != nil {
+			return nil, err
+		}
+
+		// Додаємо продукт у список
+		products = append(products, &product)
+	}
+
+	return products, nil
 }

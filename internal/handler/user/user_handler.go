@@ -12,7 +12,7 @@ import (
 )
 
 func GetUsers(c *fiber.Ctx) error {
-     db, err := utils_db.GetDbFromContext(c)
+	db, err := utils_db.GetDbFromContext(c)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Database connection error")
@@ -39,7 +39,7 @@ func GetUserByID(c *fiber.Ctx) error {
 	if id == 0 {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID")
 	}
-	user, err := service.GetUserByID(db, id )
+	user, err := service.GetUserByID(db, id)
 
 	if user == nil || err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "User not found")
@@ -54,7 +54,7 @@ func CreateUserHandler(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request")
 	}
-	
+
 	db, err := utils_db.GetDbFromContext(c)
 
 	if err != nil {
@@ -80,32 +80,41 @@ func CreateUserHandler(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(user)
 }
 
-func GetMe (c *fiber.Ctx) error {
+func GetMe(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	refreshToken := c.Cookies("refresh_token")
 
-
 	userId, err := utils.GetUserIdFromTokens(authHeader, refreshToken)
-
 	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Could not extract user ID")
+		log.Println("Error extracting user ID from tokens:", err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Could not extract user ID",
+		})
+
 	}
 
 	db, err := utils_db.GetDbFromContext(c)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Database connection error")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Database connection error",
+		})
 	}
 
 	var user *ent.User
 	user, err = service.GetUserByID(db, utils.AtoiDefault(userId))
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
 	}
 
 	if user == nil {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
 	}
+
 	return c.JSON(user)
 }

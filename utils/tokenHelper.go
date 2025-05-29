@@ -2,14 +2,15 @@ package utils
 
 import (
 	"errors"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtAccessSecret = []byte(getEnv("JWT_SECRET_ACCESS", "backup_secret_access_jwt"))
-var jwtRefreshSecret = []byte(getEnv("JWT_SECRET_ACCESS", "backup_secret_access_jwt"))
+var jwtAccessSecret = []byte(getEnv("JWT_SECRET_ACCESS", "your_jwt_secret_key_access"))
+var jwtRefreshSecret = []byte(getEnv("JWT_SECRET_REFRESH", "backup_secret_refresh_jwt"))
 
 // getEnv retrieves the value of the environment variable named by the key.
 // If the variable is not present, it returns the fallback value.
@@ -45,13 +46,14 @@ func GetUserIdFromHeaderToken(authHeader string) (string, error) {
 		return "", errors.New("token is invalid")
 	}
 
-	
 	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	log.Println("claims: ", claims)
 	if !ok {
 		return "", errors.New("failed to parse claims")
 	}
 
 	userID, ok := claims["user_id"].(string)
+	log.Println("userID: ", userID)
 	if !ok {
 		return "", errors.New("user_id not found in claims")
 	}
@@ -90,7 +92,7 @@ func GetUserIdFromRefreshToken(refreshToken string) (string, error) {
 	return userID, nil
 }
 
-func CompareUserIdFromTokens(idFromHeader string, idFromCoockies string) (bool) {
+func CompareUserIdFromTokens(idFromHeader string, idFromCoockies string) bool {
 	if idFromHeader == "" || idFromCoockies == "" {
 		return false
 	}
@@ -98,8 +100,7 @@ func CompareUserIdFromTokens(idFromHeader string, idFromCoockies string) (bool) 
 	return idFromHeader != idFromCoockies
 }
 
-
-func IsTokenValid(accessToken string, refreshToken string) (bool) {
+func IsTokenValid(accessToken string, refreshToken string) bool {
 	userIdFromHeaderToken, err := GetUserIdFromHeaderToken(accessToken)
 	if err != nil {
 		return false
@@ -109,20 +110,29 @@ func IsTokenValid(accessToken string, refreshToken string) (bool) {
 	if err != nil {
 		return false
 	}
-
-	return CompareUserIdFromTokens(userIdFromHeaderToken, userIdFromRefreshToken)	
+	log.Println("userIdFromHeaderToken: ", userIdFromHeaderToken)
+	log.Println("userIdFromRefreshToken: ", userIdFromRefreshToken)
+	return CompareUserIdFromTokens(userIdFromHeaderToken, userIdFromRefreshToken)
 }
 
 func GetUserIdFromTokens(accessToken string, refreshToken string) (string, error) {
-	if IsTokenValid(accessToken, refreshToken) {
-		userIdFromHeaderToken, err := GetUserIdFromHeaderToken(accessToken)
-		if err != nil {
-			return "", err
-		}
-		return userIdFromHeaderToken, nil
-	} 
 
-	return "", errors.New("tokens are invalid")
+	// refreshToken does not exist in the cookie of the react-native app
+	// if IsTokenValid(accessToken, refreshToken) {
+	// 	userIdFromHeaderToken, err := GetUserIdFromHeaderToken(accessToken)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
+	// 	return userIdFromHeaderToken, nil
+	// }
+
+	userIdFromHeaderToken, err := GetUserIdFromHeaderToken(accessToken)
+	log.Println("userIdFromHeaderToken: ", userIdFromHeaderToken)
+	log.Println("accessToken ", accessToken)
+	if err != nil {
+		return "", err
+	}
+
+	return userIdFromHeaderToken, nil
 
 }
-	

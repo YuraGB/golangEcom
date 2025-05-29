@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"golang-server/ent/order"
+	"golang-server/ent/user"
 	"strings"
 	"time"
 
@@ -27,6 +28,12 @@ type Order struct {
 	State string `json:"state,omitempty"`
 	// Zip holds the value of the "zip" field.
 	Zip string `json:"zip,omitempty"`
+	// UserID holds the value of the "user_id" field.
+	UserID int `json:"user_id,omitempty"`
+	// Total price of the order, must be positive
+	TotalPrice float64 `json:"total_price,omitempty"`
+	// Status of the order, can be NEW, IN_PROGRESS, COMPLETED, or CANCELED
+	Status order.Status `json:"status,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -41,9 +48,11 @@ type Order struct {
 type OrderEdges struct {
 	// OrderProducts holds the value of the order_products edge.
 	OrderProducts []*OrderProducts `json:"order_products,omitempty"`
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // OrderProductsOrErr returns the OrderProducts value or an error if the edge
@@ -55,14 +64,27 @@ func (e OrderEdges) OrderProductsOrErr() ([]*OrderProducts, error) {
 	return nil, &NotLoadedError{edge: "order_products"}
 }
 
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e OrderEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Order) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case order.FieldID:
+		case order.FieldTotalPrice:
+			values[i] = new(sql.NullFloat64)
+		case order.FieldID, order.FieldUserID:
 			values[i] = new(sql.NullInt64)
-		case order.FieldPaymentType, order.FieldAddress, order.FieldCity, order.FieldState, order.FieldZip:
+		case order.FieldPaymentType, order.FieldAddress, order.FieldCity, order.FieldState, order.FieldZip, order.FieldStatus:
 			values[i] = new(sql.NullString)
 		case order.FieldCreatedAt, order.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -117,6 +139,24 @@ func (o *Order) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				o.Zip = value.String
 			}
+		case order.FieldUserID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+			} else if value.Valid {
+				o.UserID = int(value.Int64)
+			}
+		case order.FieldTotalPrice:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field total_price", values[i])
+			} else if value.Valid {
+				o.TotalPrice = value.Float64
+			}
+		case order.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				o.Status = order.Status(value.String)
+			}
 		case order.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -145,6 +185,11 @@ func (o *Order) Value(name string) (ent.Value, error) {
 // QueryOrderProducts queries the "order_products" edge of the Order entity.
 func (o *Order) QueryOrderProducts() *OrderProductsQuery {
 	return NewOrderClient(o.config).QueryOrderProducts(o)
+}
+
+// QueryUser queries the "user" edge of the Order entity.
+func (o *Order) QueryUser() *UserQuery {
+	return NewOrderClient(o.config).QueryUser(o)
 }
 
 // Update returns a builder for updating this Order.
@@ -184,6 +229,15 @@ func (o *Order) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("zip=")
 	builder.WriteString(o.Zip)
+	builder.WriteString(", ")
+	builder.WriteString("user_id=")
+	builder.WriteString(fmt.Sprintf("%v", o.UserID))
+	builder.WriteString(", ")
+	builder.WriteString("total_price=")
+	builder.WriteString(fmt.Sprintf("%v", o.TotalPrice))
+	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(fmt.Sprintf("%v", o.Status))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(o.CreatedAt.Format(time.ANSIC))

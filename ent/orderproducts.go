@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
-	"golang-server/ent/product"
 	"strings"
 	"time"
 
@@ -37,11 +36,9 @@ type OrderProducts struct {
 type OrderProductsEdges struct {
 	// Order holds the value of the order edge.
 	Order *Order `json:"order,omitempty"`
-	// Product holds the value of the product edge.
-	Product *Product `json:"product,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 }
 
 // OrderOrErr returns the Order value or an error if the edge
@@ -53,17 +50,6 @@ func (e OrderProductsEdges) OrderOrErr() (*Order, error) {
 		return nil, &NotFoundError{label: order.Label}
 	}
 	return nil, &NotLoadedError{edge: "order"}
-}
-
-// ProductOrErr returns the Product value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e OrderProductsEdges) ProductOrErr() (*Product, error) {
-	if e.Product != nil {
-		return e.Product, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: product.Label}
-	}
-	return nil, &NotLoadedError{edge: "product"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -148,11 +134,6 @@ func (op *OrderProducts) Value(name string) (ent.Value, error) {
 // QueryOrder queries the "order" edge of the OrderProducts entity.
 func (op *OrderProducts) QueryOrder() *OrderQuery {
 	return NewOrderProductsClient(op.config).QueryOrder(op)
-}
-
-// QueryProduct queries the "product" edge of the OrderProducts entity.
-func (op *OrderProducts) QueryProduct() *ProductQuery {
-	return NewOrderProductsClient(op.config).QueryProduct(op)
 }
 
 // Update returns a builder for updating this OrderProducts.

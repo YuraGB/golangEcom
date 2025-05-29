@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	accessSecret  = []byte(utils.GetEnv("JWT_SECRET_ACCESS", "JWT_SECRET_ACCESS"))  
-	refreshSecret = []byte(utils.GetEnv("JWT_SECRET_REFRESH", "JWT_SECRET_REFRESH")) 
+	accessSecret  = []byte(utils.GetEnv("JWT_SECRET_ACCESS", "your_jwt_secret_key_access"))
+	refreshSecret = []byte(utils.GetEnv("JWT_SECRET_REFRESH", "your_jwt_secret_key_refresh"))
 )
 
 // Custom claims
@@ -26,7 +26,7 @@ func GenerateAccessToken(userID int) (string, error) {
 	claims := TokenClaims{
 		UserID: strconv.Itoa(int(userID)),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(60 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -80,21 +80,18 @@ func parseToken(tokenStr string, secret []byte) (*TokenClaims, error) {
 	return claims, nil
 }
 
-
 func GetTokens(user *ent.User) (string, string, error) {
 	refreshToken, err := GenerateRefreshToken(user.ID)
 
 	if err != nil {
-		return "", "",err
+		return "", "", err
 	}
 
 	accessToken, err := GenerateAccessToken(user.ID)
 
 	if err != nil {
-		return "", "",err
+		return "", "", err
 	}
 
 	return accessToken, refreshToken, nil
 }
-
-

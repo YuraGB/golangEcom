@@ -11,7 +11,9 @@ func RegisterBasketRoutes(router fiber.Router) {
 
 	basket.Get("/", handler.GetBasket)
 	basket.Post("/add", handler.AddToBasket)
+	basket.Post("/merge", handler.MergeBaskets)
 	basket.Delete("/remove", handler.RemoveFromBasket)
 	basket.Delete("/clear", handler.ClearBasket)
 	basket.Patch("/update", handler.UpdateProductQuantity)
+	basket.Get("/productList", handler.GetBasketProducts)
 }

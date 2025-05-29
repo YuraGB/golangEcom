@@ -8,10 +8,6 @@ import (
 
 func RegisterProductsRoutes(router fiber.Router) {
 	products := router.Group("/products")
-
 	products.Get("/", handler.GetProducts)
-
-	products.Get("/:id", func(c *fiber.Ctx) error {
-		return c.SendString("Product Details")
-	})
+	products.Get("/:id", handler.GetProductById)
 }

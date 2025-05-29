@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Basket is the predicate function for basket builders.
+type Basket func(*sql.Selector)
+
 // Order is the predicate function for order builders.
 type Order func(*sql.Selector)
 

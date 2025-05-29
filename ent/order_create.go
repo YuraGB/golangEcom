@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
+	"golang-server/ent/user"
 	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -48,6 +49,24 @@ func (oc *OrderCreate) SetState(s string) *OrderCreate {
 // SetZip sets the "zip" field.
 func (oc *OrderCreate) SetZip(s string) *OrderCreate {
 	oc.mutation.SetZip(s)
+	return oc
+}
+
+// SetUserID sets the "user_id" field.
+func (oc *OrderCreate) SetUserID(i int) *OrderCreate {
+	oc.mutation.SetUserID(i)
+	return oc
+}
+
+// SetTotalPrice sets the "total_price" field.
+func (oc *OrderCreate) SetTotalPrice(f float64) *OrderCreate {
+	oc.mutation.SetTotalPrice(f)
+	return oc
+}
+
+// SetStatus sets the "status" field.
+func (oc *OrderCreate) SetStatus(o order.Status) *OrderCreate {
+	oc.mutation.SetStatus(o)
 	return oc
 }
 
@@ -92,6 +111,11 @@ func (oc *OrderCreate) AddOrderProducts(o ...*OrderProducts) *OrderCreate {
 		ids[i] = o[i].ID
 	}
 	return oc.AddOrderProductIDs(ids...)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (oc *OrderCreate) SetUser(u *User) *OrderCreate {
+	return oc.SetUserID(u.ID)
 }
 
 // Mutation returns the OrderMutation object of the builder.
@@ -181,11 +205,33 @@ func (oc *OrderCreate) check() error {
 			return &ValidationError{Name: "zip", err: fmt.Errorf(`ent: validator failed for field "Order.zip": %w`, err)}
 		}
 	}
+	if _, ok := oc.mutation.UserID(); !ok {
+		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Order.user_id"`)}
+	}
+	if _, ok := oc.mutation.TotalPrice(); !ok {
+		return &ValidationError{Name: "total_price", err: errors.New(`ent: missing required field "Order.total_price"`)}
+	}
+	if v, ok := oc.mutation.TotalPrice(); ok {
+		if err := order.TotalPriceValidator(v); err != nil {
+			return &ValidationError{Name: "total_price", err: fmt.Errorf(`ent: validator failed for field "Order.total_price": %w`, err)}
+		}
+	}
+	if _, ok := oc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Order.status"`)}
+	}
+	if v, ok := oc.mutation.Status(); ok {
+		if err := order.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Order.status": %w`, err)}
+		}
+	}
 	if _, ok := oc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Order.created_at"`)}
 	}
 	if _, ok := oc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Order.updated_at"`)}
+	}
+	if len(oc.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "Order.user"`)}
 	}
 	return nil
 }
@@ -233,6 +279,14 @@ func (oc *OrderCreate) createSpec() (*Order, *sqlgraph.CreateSpec) {
 		_spec.SetField(order.FieldZip, field.TypeString, value)
 		_node.Zip = value
 	}
+	if value, ok := oc.mutation.TotalPrice(); ok {
+		_spec.SetField(order.FieldTotalPrice, field.TypeFloat64, value)
+		_node.TotalPrice = value
+	}
+	if value, ok := oc.mutation.Status(); ok {
+		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
+		_node.Status = value
+	}
 	if value, ok := oc.mutation.CreatedAt(); ok {
 		_spec.SetField(order.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -255,6 +309,23 @@ func (oc *OrderCreate) createSpec() (*Order, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := oc.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   order.UserTable,
+			Columns: []string{order.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

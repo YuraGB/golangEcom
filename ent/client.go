@@ -11,6 +11,7 @@ import (
 
 	"golang-server/ent/migrate"
 
+	"golang-server/ent/basket"
 	"golang-server/ent/order"
 	"golang-server/ent/orderproducts"
 	"golang-server/ent/product"
@@ -27,6 +28,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Basket is the client for interacting with the Basket builders.
+	Basket *BasketClient
 	// Order is the client for interacting with the Order builders.
 	Order *OrderClient
 	// OrderProducts is the client for interacting with the OrderProducts builders.
@@ -46,6 +49,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Basket = NewBasketClient(c.config)
 	c.Order = NewOrderClient(c.config)
 	c.OrderProducts = NewOrderProductsClient(c.config)
 	c.Product = NewProductClient(c.config)
@@ -142,6 +146,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:           ctx,
 		config:        cfg,
+		Basket:        NewBasketClient(cfg),
 		Order:         NewOrderClient(cfg),
 		OrderProducts: NewOrderProductsClient(cfg),
 		Product:       NewProductClient(cfg),
@@ -165,6 +170,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:           ctx,
 		config:        cfg,
+		Basket:        NewBasketClient(cfg),
 		Order:         NewOrderClient(cfg),
 		OrderProducts: NewOrderProductsClient(cfg),
 		Product:       NewProductClient(cfg),
@@ -175,7 +181,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Order.
+//		Basket.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -197,6 +203,7 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Basket.Use(hooks...)
 	c.Order.Use(hooks...)
 	c.OrderProducts.Use(hooks...)
 	c.Product.Use(hooks...)
@@ -206,6 +213,7 @@ func (c *Client) Use(hooks ...Hook) {
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.Basket.Intercept(interceptors...)
 	c.Order.Intercept(interceptors...)
 	c.OrderProducts.Intercept(interceptors...)
 	c.Product.Intercept(interceptors...)
@@ -215,6 +223,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *BasketMutation:
+		return c.Basket.mutate(ctx, m)
 	case *OrderMutation:
 		return c.Order.mutate(ctx, m)
 	case *OrderProductsMutation:
@@ -225,6 +235,155 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// BasketClient is a client for the Basket schema.
+type BasketClient struct {
+	config
+}
+
+// NewBasketClient returns a client for the Basket from the given config.
+func NewBasketClient(c config) *BasketClient {
+	return &BasketClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `basket.Hooks(f(g(h())))`.
+func (c *BasketClient) Use(hooks ...Hook) {
+	c.hooks.Basket = append(c.hooks.Basket, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `basket.Intercept(f(g(h())))`.
+func (c *BasketClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Basket = append(c.inters.Basket, interceptors...)
+}
+
+// Create returns a builder for creating a Basket entity.
+func (c *BasketClient) Create() *BasketCreate {
+	mutation := newBasketMutation(c.config, OpCreate)
+	return &BasketCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Basket entities.
+func (c *BasketClient) CreateBulk(builders ...*BasketCreate) *BasketCreateBulk {
+	return &BasketCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BasketClient) MapCreateBulk(slice any, setFunc func(*BasketCreate, int)) *BasketCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BasketCreateBulk{err: fmt.Errorf("calling to BasketClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BasketCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BasketCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Basket.
+func (c *BasketClient) Update() *BasketUpdate {
+	mutation := newBasketMutation(c.config, OpUpdate)
+	return &BasketUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BasketClient) UpdateOne(b *Basket) *BasketUpdateOne {
+	mutation := newBasketMutation(c.config, OpUpdateOne, withBasket(b))
+	return &BasketUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BasketClient) UpdateOneID(id int) *BasketUpdateOne {
+	mutation := newBasketMutation(c.config, OpUpdateOne, withBasketID(id))
+	return &BasketUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Basket.
+func (c *BasketClient) Delete() *BasketDelete {
+	mutation := newBasketMutation(c.config, OpDelete)
+	return &BasketDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BasketClient) DeleteOne(b *Basket) *BasketDeleteOne {
+	return c.DeleteOneID(b.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BasketClient) DeleteOneID(id int) *BasketDeleteOne {
+	builder := c.Delete().Where(basket.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BasketDeleteOne{builder}
+}
+
+// Query returns a query builder for Basket.
+func (c *BasketClient) Query() *BasketQuery {
+	return &BasketQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBasket},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Basket entity by its id.
+func (c *BasketClient) Get(ctx context.Context, id int) (*Basket, error) {
+	return c.Query().Where(basket.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BasketClient) GetX(ctx context.Context, id int) *Basket {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a Basket.
+func (c *BasketClient) QueryUser(b *Basket) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(basket.Table, basket.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, basket.UserTable, basket.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BasketClient) Hooks() []Hook {
+	return c.hooks.Basket
+}
+
+// Interceptors returns the client interceptors.
+func (c *BasketClient) Interceptors() []Interceptor {
+	return c.inters.Basket
+}
+
+func (c *BasketClient) mutate(ctx context.Context, m *BasketMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BasketCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BasketUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BasketUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BasketDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Basket mutation op: %q", m.Op())
 	}
 }
 
@@ -345,6 +504,22 @@ func (c *OrderClient) QueryOrderProducts(o *Order) *OrderProductsQuery {
 			sqlgraph.From(order.Table, order.FieldID, id),
 			sqlgraph.To(orderproducts.Table, orderproducts.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, order.OrderProductsTable, order.OrderProductsColumn),
+		)
+		fromV = sqlgraph.Neighbors(o.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a Order.
+func (c *OrderClient) QueryUser(o *Order) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := o.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(order.Table, order.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, order.UserTable, order.UserColumn),
 		)
 		fromV = sqlgraph.Neighbors(o.driver.Dialect(), step)
 		return fromV, nil
@@ -494,22 +669,6 @@ func (c *OrderProductsClient) QueryOrder(op *OrderProducts) *OrderQuery {
 			sqlgraph.From(orderproducts.Table, orderproducts.FieldID, id),
 			sqlgraph.To(order.Table, order.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, orderproducts.OrderTable, orderproducts.OrderColumn),
-		)
-		fromV = sqlgraph.Neighbors(op.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProduct queries the product edge of a OrderProducts.
-func (c *OrderProductsClient) QueryProduct(op *OrderProducts) *ProductQuery {
-	query := (&ProductClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := op.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(orderproducts.Table, orderproducts.FieldID, id),
-			sqlgraph.To(product.Table, product.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, orderproducts.ProductTable, orderproducts.ProductColumn),
 		)
 		fromV = sqlgraph.Neighbors(op.driver.Dialect(), step)
 		return fromV, nil
@@ -799,6 +958,38 @@ func (c *UserClient) GetX(ctx context.Context, id int) *User {
 	return obj
 }
 
+// QueryBaskets queries the baskets edge of a User.
+func (c *UserClient) QueryBaskets(u *User) *BasketQuery {
+	query := (&BasketClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(basket.Table, basket.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.BasketsTable, user.BasketsColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOrders queries the orders edge of a User.
+func (c *UserClient) QueryOrders(u *User) *OrderQuery {
+	query := (&OrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(order.Table, order.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.OrdersTable, user.OrdersColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
@@ -827,9 +1018,9 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Order, OrderProducts, Product, User []ent.Hook
+		Basket, Order, OrderProducts, Product, User []ent.Hook
 	}
 	inters struct {
-		Order, OrderProducts, Product, User []ent.Interceptor
+		Basket, Order, OrderProducts, Product, User []ent.Interceptor
 	}
 )
