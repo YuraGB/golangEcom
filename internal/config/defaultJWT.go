@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var accessSecret = []byte("your_jwt_secret_key_access") // заміни на свій ключ
+var accessSecret = []byte("your_jwt_secret_key_access")
 
 func DebugJWTMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
