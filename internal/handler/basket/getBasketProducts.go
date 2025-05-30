@@ -14,9 +14,6 @@ import (
 func GetBasketProducts(c *fiber.Ctx) error {
 	// Query parameters will be if the user not logged in
 	queryParams := c.Query("ids")
-	z := c.Params("ids")
-	log.Println(queryParams)
-	log.Println(z)
 
 	if queryParams != "" {
 		strParts := strings.Split(queryParams, ",")
