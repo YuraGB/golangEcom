@@ -56,6 +56,7 @@ func AddProductToBasket(userId int, db *ent.Client, ctx context.Context, item mo
 		product, err := db.Basket.
 			Create().
 			SetUserID(userId).
+			SetPrice(item.Price).
 			SetProductID(item.ProductID).
 			SetQuantity(item.Quantity).
 			Save(ctx)

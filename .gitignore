@@ -29,6 +29,9 @@ Godeps/
 # Logs
 *.log
 
+# Sertificats
+*.pem
+
 # OS-specific files
 .DS_Store
 Thumbs.db

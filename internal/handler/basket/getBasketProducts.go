@@ -4,11 +4,43 @@ import (
 	"golang-server/internal/service"
 	"golang-server/utils"
 	utils_db "golang-server/utils/db"
+	"log"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func GetBasketProducts(c *fiber.Ctx) error {
+	// Query parameters will be if the user not logged in
+	queryParams := c.Query("ids")
+	z := c.Params("ids")
+	log.Println(queryParams)
+	log.Println(z)
+
+	if queryParams != "" {
+		strParts := strings.Split(queryParams, ",")
+		var intParts []int
+
+		for _, part := range strParts {
+			num, err := strconv.Atoi(strings.TrimSpace(part))
+
+			if err != nil {
+				log.Printf("Помилка конвертації '%s': %v\n", part, err)
+				continue
+			}
+
+			intParts = append(intParts, num)
+		}
+
+		products, err := utils.GetProductsByIDs(intParts)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error in getting basket"})
+		}
+
+		return c.JSON(products)
+	}
+
 	// Get user ID from context
 	userId, err := utils.GetUserIdFromCtx(c)
 	if err != nil {

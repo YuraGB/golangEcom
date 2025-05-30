@@ -10,4 +10,5 @@ type ExtendedProduct struct {
 type BasketProduct struct {
 	ProductID int
 	Quantity  int
+	Price     float64
 }
